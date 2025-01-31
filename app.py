@@ -6,13 +6,13 @@ import time
 
 app = Flask(__name__)
 
-# Enable CORS for all routes
-CORS(app)
+# Enable CORS for all routes and allow all origins
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Bright Data API Key
 API_KEY = "60a18bcb5ff44e333b12b04b65c0bbf41cf6f957a5ec2f323d019de6531015c6"
 
-# Dataset ID (replace with your dataset)
+# Dataset ID
 DATASET_ID = "gd_l1vikfch901nx3by4"
 
 # API Endpoints
@@ -30,8 +30,7 @@ def get_snapshot_id(instagram_username):
     response = requests.post(TRIGGER_URL, headers=headers, data=payload)
     
     if response.status_code == 200:
-        snapshot_id = response.json().get("snapshot_id")
-        return snapshot_id
+        return response.json().get("snapshot_id")
     return None
 
 def wait_for_snapshot(snapshot_id):
@@ -40,10 +39,16 @@ def wait_for_snapshot(snapshot_id):
     
     while True:
         response = requests.get(SNAPSHOT_URL.format(snapshot_id), headers=headers)
-        json_response = response.json()
-
+        
+        # Ensure response is valid JSON before parsing
+        try:
+            json_response = response.json()
+        except json.JSONDecodeError:
+            return {"error": "Invalid response from API"}
+        
         if response.status_code == 200 and "status" not in json_response:
             return json_response  # Snapshot is ready, return JSON data
+        
         time.sleep(30)  # Retry every 30 seconds
 
 @app.route("/get_instagram_data", methods=["GET"])
@@ -58,7 +63,12 @@ def get_instagram_data():
         return jsonify({"error": "Failed to get snapshot ID"}), 500
     
     json_data = wait_for_snapshot(snapshot_id)
-    return jsonify(json_data)
+    
+    # Explicitly set CORS headers in response
+    response = jsonify(json_data)
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    
+    return response
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
