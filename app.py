@@ -7,7 +7,7 @@ import time
 app = Flask(__name__)
 
 # Enable CORS for all routes and allow all origins
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 # Bright Data API Key
 API_KEY = "60a18bcb5ff44e333b12b04b65c0bbf41cf6f957a5ec2f323d019de6531015c6"
@@ -27,27 +27,35 @@ def get_snapshot_id(instagram_username):
     }
     
     payload = json.dumps([{"url": f"https://www.instagram.com/{instagram_username}/"}])
-    response = requests.post(TRIGGER_URL, headers=headers, data=payload)
     
-    if response.status_code == 200:
+    try:
+        response = requests.post(TRIGGER_URL, headers=headers, data=payload)
+        response.raise_for_status()  # Raise an exception for HTTP errors
         return response.json().get("snapshot_id")
-    return None
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching snapshot ID: {e}")
+        return None
 
 def wait_for_snapshot(snapshot_id):
     """Wait for snapshot to be ready and return JSON"""
     headers = {"Authorization": f"Bearer {API_KEY}"}
     
     while True:
-        response = requests.get(SNAPSHOT_URL.format(snapshot_id), headers=headers)
-        
-        # Ensure response is valid JSON before parsing
         try:
-            json_response = response.json()
-        except json.JSONDecodeError:
-            return {"error": "Invalid response from API"}
-        
-        if response.status_code == 200 and "status" not in json_response:
-            return json_response  # Snapshot is ready, return JSON data
+            response = requests.get(SNAPSHOT_URL.format(snapshot_id), headers=headers)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            
+            # Ensure response is valid JSON before parsing
+            try:
+                json_response = response.json()
+            except json.JSONDecodeError:
+                return {"error": "Invalid response from API"}
+            
+            if "status" not in json_response:
+                return json_response  # Snapshot is ready, return JSON data
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching snapshot data: {e}")
+            return {"error": "Failed to fetch snapshot data"}
         
         time.sleep(30)  # Retry every 30 seconds
 
