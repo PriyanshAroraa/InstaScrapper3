@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import CORS
 import requests
 import json
 import time
 
 app = Flask(__name__)
+
+# Enable CORS for all routes
+CORS(app)
 
 # Bright Data API Key
 API_KEY = "60a18bcb5ff44e333b12b04b65c0bbf41cf6f957a5ec2f323d019de6531015c6"
