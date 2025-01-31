@@ -7,7 +7,7 @@ import time
 app = Flask(__name__)
 
 # Enable CORS for all routes and allow all origins
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}})
 
 # Bright Data API Key
 API_KEY = "60a18bcb5ff44e333b12b04b65c0bbf41cf6f957a5ec2f323d019de6531015c6"
@@ -59,9 +59,16 @@ def wait_for_snapshot(snapshot_id):
         
         time.sleep(30)  # Retry every 30 seconds
 
-@app.route("/get_instagram_data", methods=["GET"])
+@app.route("/get_instagram_data", methods=["GET", "OPTIONS"])
 def get_instagram_data():
-    """API Endpoint: Takes username and returns Instagram data"""
+    if request.method == "OPTIONS":
+        # Handle preflight request
+        response = jsonify()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Methods", "GET")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        return response
+
     username = request.args.get("username")
     if not username:
         return jsonify({"error": "Username parameter is required"}), 400
@@ -75,7 +82,6 @@ def get_instagram_data():
     # Explicitly set CORS headers in response
     response = jsonify(json_data)
     response.headers.add("Access-Control-Allow-Origin", "*")
-    
     return response
 
 if __name__ == "__main__":
