@@ -6,11 +6,13 @@ import time
 import os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "OPTIONS"]}})
+
+# ✅ Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.after_request
 def add_cors_headers(response):
-    """Add CORS headers for cross-origin requests"""
+    """✅ Add CORS headers for cross-origin requests"""
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
@@ -32,7 +34,7 @@ TRIGGER_URL = "https://api.brightdata.com/datasets/v3/trigger"
 SNAPSHOT_URL = "https://api.brightdata.com/datasets/v3/snapshot/{}?format=json"
 
 def get_snapshot_id(platform, urls):
-    """Trigger Bright Data request and get snapshot ID for the selected platform"""
+    """✅ Trigger Bright Data request and get snapshot ID for the selected platform"""
     if platform not in DATASETS:
         return None
 
@@ -43,18 +45,18 @@ def get_snapshot_id(platform, urls):
     }
 
     payload = json.dumps(urls)
-    
+
     try:
         response = requests.post(f"{TRIGGER_URL}?dataset_id={dataset_id}&include_errors=true", headers=headers, data=payload, timeout=10)
         response.raise_for_status()
         print(f"✅ Snapshot ID Triggered for {platform}: {response.json()}")
         return response.json().get("snapshot_id")
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"❌ Error in get_snapshot_id ({platform}): {str(e)}")
         return None
 
 def wait_for_snapshot(snapshot_id):
-    """Wait for snapshot to be ready"""
+    """✅ Wait for snapshot to be ready"""
     headers = {"Authorization": f"Bearer {API_KEY}"}
 
     try:
@@ -65,30 +67,29 @@ def wait_for_snapshot(snapshot_id):
             json_response = response.json()
             if "status" not in json_response:
                 print("✅ Snapshot Ready!")
-                return json_response  # Return JSON data
-            
+                return json_response  # ✅ Return JSON data
+
             print("⏳ Waiting for snapshot... Retrying in 30 sec...")
             time.sleep(30)
 
-    except Exception as e:
+    except requests.RequestException as e:
         print(f"❌ Error in wait_for_snapshot: {str(e)}")
         return {"error": str(e)}
 
 @app.route("/get_social_data", methods=["GET", "OPTIONS"])
 def get_social_data():
+    """✅ API Endpoint to fetch social media data"""
     if request.method == "OPTIONS":
-        return jsonify({}), 200  # Respond to preflight CORS requests
+        return jsonify({}), 200  # ✅ Respond to preflight CORS requests
 
-    platform = request.args.get("platform")
-    username = request.args.get("username")
+    platform = request.args.get("platform", "").lower()
+    username = request.args.get("username", "").strip()
 
-    if not platform or platform.lower() not in DATASETS:
+    if not platform or platform not in DATASETS:
         return jsonify({"error": "Invalid or missing platform"}), 400
 
     if not username:
         return jsonify({"error": "Username parameter is required"}), 400
-
-    platform = platform.lower()
 
     # 🔄 Different API structures for each platform
     if platform == "instagram":
@@ -109,6 +110,7 @@ def get_social_data():
     json_data = wait_for_snapshot(snapshot_id)
     return jsonify(json_data)
 
+# 🚀 Use Railway's assigned port or default to 5000
 PORT = int(os.environ.get("PORT", 5000))
 
 if __name__ == "__main__":
