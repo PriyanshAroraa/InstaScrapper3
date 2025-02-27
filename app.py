@@ -19,7 +19,7 @@ def add_cors_headers(response):
     return response
 
 # 🔐 Bright Data API Key
-API_KEY = "60a18bcb5ff44e333b12b04b65c0bbf41cf6f957a5ec2f323d019de6531015c6"
+API_KEY = "9a7d50764d5bbc77e868e36a86d47f25b2214a2528195a881f40ada5e93c6024"
 
 # 📊 Dataset IDs for Different Platforms
 DATASETS = {
